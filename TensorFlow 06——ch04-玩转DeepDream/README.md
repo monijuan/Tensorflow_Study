@@ -1,7 +1,6 @@
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/20200902162932165.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM0NDUxOTA5,size_16,color_FFFFFF,t_70#pic_center)
 
-
-代码链接：[https://github.com/MONI-JUAN/Tensorflow_Study/tree/master/TensorFlow%2006%E2%80%94%E2%80%94ch04-%E7%8E%A9%E8%BD%ACDeepDream](https://github.com/MONI-JUAN/Tensorflow_Study/tree/master/TensorFlow%2006%E2%80%94%E2%80%94ch04-%E7%8E%A9%E8%BD%ACDeepDream)
+csdn：https://blog.csdn.net/qq_34451909/article/details/108360112
 
 准备工作：下载预训练的 Inception 模型，ch4 的 tensorflow_inception_graph.pb
 链接：https://pan.baidu.com/s/1IC5x_md8NNZr5pL3ccgjOQ
