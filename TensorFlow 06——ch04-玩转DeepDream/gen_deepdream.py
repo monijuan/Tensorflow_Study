@@ -9,17 +9,6 @@ import scipy.misc
 import tensorflow as tf
 
 
-graph = tf.Graph()
-model_fn = 'tensorflow_inception_graph.pb'
-sess = tf.InteractiveSession(graph=graph)
-with tf.gfile.FastGFile(model_fn, 'rb') as f:
-    graph_def = tf.GraphDef()
-    graph_def.ParseFromString(f.read())
-t_input = tf.placeholder(np.float32, name='input')  # define the input tensor
-imagenet_mean = 117.0
-t_preprocessed = tf.expand_dims(t_input - imagenet_mean, 0)
-tf.import_graph_def(graph_def, {'input': t_preprocessed})
-
 
 def savearray(img_array, img_name):
     scipy.misc.toimage(img_array).save(img_name)
@@ -72,12 +61,9 @@ def tffunc(*argtypes):
     return wrap
 
 
-
-def render_deepdream(t_obj, img0,
-                     iter_n=10, step=1.5, octave_n=4, octave_scale=1.4):
+def render_deepdream(t_obj, img0, iter_n=10, step=1.5, octave_n=4, octave_scale=1.4):
     t_score = tf.reduce_mean(t_obj)
     t_grad = tf.gradients(t_score, t_input)[0]
-
     img = img0
     # 同样将图像进行金字塔分解
     # 此时提取高频、低频的方法比较简单。直接缩放就可以
@@ -88,7 +74,6 @@ def render_deepdream(t_obj, img0,
         hi = img - resize(lo, hw)
         img = lo
         octaves.append(hi)
-
     # 先生成低频的图像，再依次放大并加上高频
     for octave in range(octave_n):
         if octave > 0:
@@ -98,12 +83,23 @@ def render_deepdream(t_obj, img0,
             g = calc_grad_tiled(img, t_grad)
             img += g * (step / (np.abs(g).mean() + 1e-7))
             print('.', end=' ')
-
     img = img.clip(0, 255)
     savearray(img, 'deepdream.jpg')
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
+    graph = tf.Graph()
+    model_fn = 'tensorflow_inception_graph.pb'
+    sess = tf.InteractiveSession(graph=graph)
+    with tf.gfile.FastGFile(model_fn, 'rb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+    t_input = tf.placeholder(np.float32, name='input')  # define the input tensor
+    imagenet_mean = 117.0
+    t_preprocessed = tf.expand_dims(t_input - imagenet_mean, 0)
+    tf.import_graph_def(graph_def, {'input': t_preprocessed})
+
+
     img0 = PIL.Image.open('test.jpg')
     img0 = np.float32(img0)
 
@@ -111,7 +107,3 @@ if __name__ == '__main__':
     channel = 139
     layer_output = graph.get_tensor_by_name("import/%s:0" % name)
     render_deepdream(layer_output[:, :, :, channel], img0)
-
-    # name = 'mixed4c'
-    # layer_output = graph.get_tensor_by_name("import/%s:0" % name)
-    # render_deepdream(tf.square(layer_output), img0)

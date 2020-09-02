@@ -9,23 +9,13 @@ import scipy.misc
 import tensorflow as tf
 
 
-graph = tf.Graph()
-model_fn = 'tensorflow_inception_graph.pb'
-sess = tf.InteractiveSession(graph=graph)
-with tf.gfile.FastGFile(model_fn, 'rb') as f:
-    graph_def = tf.GraphDef()
-    graph_def.ParseFromString(f.read())
-t_input = tf.placeholder(np.float32, name='input')
-imagenet_mean = 117.0
-t_preprocessed = tf.expand_dims(t_input - imagenet_mean, 0)
-tf.import_graph_def(graph_def, {'input': t_preprocessed})
-
-
+# 以把一个 numpy.ndarray 保存成文件的形式。
 def savearray(img_array, img_name):
     scipy.misc.toimage(img_array).save(img_name)
     print('img saved: %s' % img_name)
 
 
+# 每次将将图片放大octave_scale倍
 def resize_ratio(img, ratio):
     min = img.min()
     max = img.max()
@@ -35,6 +25,7 @@ def resize_ratio(img, ratio):
     return img
 
 
+# 计算任意大小图像的梯度
 def calc_grad_tiled(img, t_grad, tile_size=512):
     # 每次只对tile_size×tile_size大小的图像计算梯度，避免内存问题
     sz = tile_size
@@ -56,27 +47,35 @@ def calc_grad_tiled(img, t_grad, tile_size=512):
 
 
 def render_multiscale(t_obj, img0, iter_n=10, step=1.0, octave_n=3, octave_scale=1.4):
-    # 同样定义目标和梯度
-    t_score = tf.reduce_mean(t_obj)
-    t_grad = tf.gradients(t_score, t_input)[0]
-
+    t_score = tf.reduce_mean(t_obj) # t_score是优化目标，是t_obj的平均值   
+    t_grad = tf.gradients(t_score, t_input)[0] # 计算 t_score 对 t_input 的梯度 
     img = img0.copy()
     for octave in range(octave_n):
         if octave > 0:
-            # 每次将将图片放大octave_scale倍
-            # 共放大octave_n - 1 次
+            # 每次将将图片放大octave_scale倍，共放大octave_n - 1 次            
             img = resize_ratio(img, octave_scale)
-        for i in range(iter_n):
-            # 调用calc_grad_tiled计算任意大小图像的梯度
-            g = calc_grad_tiled(img, t_grad)
+        for i in range(iter_n):            
+            g = calc_grad_tiled(img, t_grad) # 计算任意大小图像的梯度
             g /= g.std() + 1e-8
             img += g * step
             print('.', end=' ')
-    savearray(img, 'multiscale.jpg')
+    savearray(img, 'jpg/multiscale_%d.jpg'%octave_n)
 
-if __name__ == '__main__':
-    name = 'mixed4d_3x3_bottleneck_pre_relu'
-    channel = 139
-    img_noise = np.random.uniform(size=(224, 224, 3)) + 100.0
-    layer_output = graph.get_tensor_by_name("import/%s:0" % name)
-    render_multiscale(layer_output[:, :, :, channel], img_noise, iter_n=20)
+
+# 导入Inception模型
+graph = tf.Graph()
+model_fn = 'tensorflow_inception_graph.pb'
+sess = tf.InteractiveSession(graph=graph)
+with tf.gfile.FastGFile(model_fn, 'rb') as f:
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(f.read())
+t_input = tf.placeholder(np.float32, name='input')
+imagenet_mean = 117.0
+t_preprocessed = tf.expand_dims(t_input - imagenet_mean, 0)
+tf.import_graph_def(graph_def, {'input': t_preprocessed})
+
+name = 'mixed4d_3x3_bottleneck_pre_relu'
+channel = 139
+img_noise = np.random.uniform(size=(224, 224, 3)) + 100.0
+layer_output = graph.get_tensor_by_name("import/%s:0" % name)
+render_multiscale(layer_output[:, :, :, channel], img_noise, octave_n=5, iter_n=20)
