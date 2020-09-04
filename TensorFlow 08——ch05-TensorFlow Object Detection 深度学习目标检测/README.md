@@ -1,8 +1,5 @@
 CSDN：https://blog.csdn.net/qq_34451909/article/details/108382667
 
-代码链接：[https://github.com/MONI-JUAN/Tensorflow_Study/ch05-TensorFlow深度学习目标检测](https://github.com/MONI-JUAN/Tensorflow_Study/tree/master/TensorFlow%E2%80%94%E2%80%94ch05-TensorFlow%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B)
-
-
 数据集和模型较大，可以提前下！
 链接：[https://pan.baidu.com/s/11E-8-AmUniHqu5WvQF82gQ](https://pan.baidu.com/s/11E-8-AmUniHqu5WvQF82gQ) 
 提取码：w9bi
