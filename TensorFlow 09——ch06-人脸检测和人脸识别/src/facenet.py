@@ -40,27 +40,23 @@ import random
 import re
 from tensorflow.python.platform import gfile
 
-def triplet_loss(anchor, positive, negative, alpha):
-    """Calculate the triplet loss according to the FaceNet paper
-    
+def triplet_loss(anchor, positive, negative, alpha): # 三元组损失
+    """Calculate the triplet loss according to the FaceNet paper    
     Args:
-      anchor: the embeddings for the anchor images.
-      positive: the embeddings for the positive images.
-      negative: the embeddings for the negative images.
-  
+      anchor: the embeddings for the anchor images. 随机选取的人脸样本特征
+      positive: the embeddings for the positive images. 正特征
+      negative: the embeddings for the negative images. 负特征  
     Returns:
       the triplet loss according to the FaceNet paper as a float tensor.
     """
     with tf.variable_scope('triplet_loss'):
         pos_dist = tf.reduce_sum(tf.square(tf.subtract(anchor, positive)), 1)
-        neg_dist = tf.reduce_sum(tf.square(tf.subtract(anchor, negative)), 1)
-        
-        basic_loss = tf.add(tf.subtract(pos_dist,neg_dist), alpha)
-        loss = tf.reduce_mean(tf.maximum(basic_loss, 0.0), 0)
-      
+        neg_dist = tf.reduce_sum(tf.square(tf.subtract(anchor, negative)), 1)        
+        basic_loss = tf.add(tf.subtract(pos_dist, neg_dist), alpha)
+        loss = tf.reduce_mean(tf.maximum(basic_loss, 0.0), 0)      
     return loss
   
-def decov_loss(xs):
+def decov_loss(xs): 
     """Decov loss as described in https://arxiv.org/pdf/1511.06068.pdf
     'Reducing Overfitting In Deep Networks by Decorrelating Representation'
     """
@@ -73,18 +69,18 @@ def decov_loss(xs):
     loss = 0.5*(corr_frob_sqr - corr_diag_sqr)
     return loss 
   
-def center_loss(features, label, alfa, nrof_classes):
+def center_loss(features, label, alfa, nrof_classes): # 中心损失
     """Center loss based on the paper "A Discriminative Feature Learning Approach for Deep Face Recognition"
        (http://ydwen.github.io/papers/WenECCV16.pdf)
     """
-    nrof_features = features.get_shape()[1]
+    nrof_features = features.get_shape()[1] # 神经网络计算的人脸的维数
     centers = tf.get_variable('centers', [nrof_classes, nrof_features], dtype=tf.float32,
-        initializer=tf.constant_initializer(0), trainable=False)
+        initializer=tf.constant_initializer(0), trainable=False) # 各个类别对应的类别中心
     label = tf.reshape(label, [-1])
-    centers_batch = tf.gather(centers, label)
-    diff = (1 - alfa) * (centers_batch - features)
-    centers = tf.scatter_sub(centers, label, diff)
-    loss = tf.reduce_mean(tf.square(features - centers_batch))
+    centers_batch = tf.gather(centers, label) # 取出features中label对应的类别中心
+    diff = (1 - alfa) * (centers_batch - features) # 计算中心和各样本特征的差距
+    centers = tf.scatter_sub(centers, label, diff) # 更新中心
+    loss = tf.reduce_mean(tf.square(features - centers_batch)) # 计算loss
     return loss, centers
 
 def get_image_paths_and_labels(dataset):
