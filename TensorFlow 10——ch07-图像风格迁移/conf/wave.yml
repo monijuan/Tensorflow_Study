@@ -1,0 +1,26 @@
+## Basic configuration
+style_image: img/wave.jpg # 输入原始风格图像的文件名
+naming: "wave" # 风格/模型的名字
+model_path: models  # checkpoint 和 events 文件保存的根目录
+
+## Weight of the loss
+content_weight: 1.0  # 内容损失的权重
+style_weight: 220.0  # 风格损失的权重
+tv_weight: 0.0  # total variation loss
+
+## The size, the iter number to run
+image_size: 256   # 原始图片的大小
+batch_size: 4     # 一次 batch 的样本数
+epoch: 2  # epoch 的运行次数
+
+## Loss Network
+loss_model: "vgg_16" # 使用 vgg_16 的模型
+content_layers:  # 使用 conv3_3 定义内容损失
+  - "vgg_16/conv3/conv3_3"
+style_layers:  # 使用 conv1_2、conv2_2、conv3_3、conv4_3 定义风格损失
+  - "vgg_16/conv1/conv1_2"
+  - "vgg_16/conv2/conv2_2"
+  - "vgg_16/conv3/conv3_3"
+  - "vgg_16/conv4/conv4_3"
+checkpoint_exclude_scopes: "vgg_16/fc"  # 只需要卷积层，不需要fc层
+loss_model_file: "pretrained/vgg_16.ckpt"  # 预训练对应的位置
