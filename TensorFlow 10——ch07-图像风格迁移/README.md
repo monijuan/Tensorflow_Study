@@ -281,6 +281,188 @@ tensorboard --logdir models/wave/
 
 有百度云资源的可以发一下！感激涕零！
 
+
+
+### 3.实现细节
+
+#### 1）生成网络的定义
+
+ models.py
+
+```python
+def net(image, training):
+    # 图片加上一圈边框，消除边缘效应
+    image = tf.pad(image, [[0, 0], [10, 10], [10, 10], [0, 0]], mode='REFLECT')
+
+    # 三层卷积层
+    with tf.variable_scope('conv1'):
+        conv1 = relu(instance_norm(conv2d(image, 3, 32, 9, 1)))
+    with tf.variable_scope('conv2'):
+        conv2 = relu(instance_norm(conv2d(conv1, 32, 64, 3, 2)))
+    with tf.variable_scope('conv3'):
+        conv3 = relu(instance_norm(conv2d(conv2, 64, 128, 3, 2)))
+    
+    # 仿照 ResNet 定义一些跳过的链接
+    with tf.variable_scope('res1'):
+        res1 = residual(conv3, 128, 3, 1)
+    with tf.variable_scope('res2'):
+        res2 = residual(res1, 128, 3, 1)
+    with tf.variable_scope('res3'):
+        res3 = residual(res2, 128, 3, 1)
+    with tf.variable_scope('res4'):
+        res4 = residual(res3, 128, 3, 1)
+    with tf.variable_scope('res5'):
+        res5 = residual(res4, 128, 3, 1)
+    # print(res5.get_shape())
+
+    # 定义反卷积，先放大再卷积可以消除噪声
+    with tf.variable_scope('deconv1'):
+        # deconv1 = relu(instance_norm(conv2d_transpose(res5, 128, 64, 3, 2))) #不直接转置
+        deconv1 = relu(instance_norm(resize_conv2d(res5, 128, 64, 3, 2, training)))
+    with tf.variable_scope('deconv2'):
+        # deconv2 = relu(instance_norm(conv2d_transpose(deconv1, 64, 32, 3, 2))) #不直接转置
+        deconv2 = relu(instance_norm(resize_conv2d(deconv1, 64, 32, 3, 2, training)))
+    with tf.variable_scope('deconv3'):
+        # deconv_test = relu(instance_norm(conv2d(deconv2, 32, 32, 2, 1))) #不直接转置
+        deconv3 = tf.nn.tanh(instance_norm(conv2d(deconv2, 32, 3, 9, 1)))
+
+    # 经过了 tanh 激活，将[-1,1]缩放到[0,255]像素值范围
+    y = (deconv3 + 1) * 127.5
+
+    # 去除边框
+    height = tf.shape(y)[1]
+    width = tf.shape(y)[2]
+    y = tf.slice(y, [0, 10, 10, 0], tf.stack([-1, height - 20, width - 20, -1]))
+    
+    return y
+```
+
+#### 2）生成网络的引用
+
+train.py
+
+```python
+"""Build Network"""
+# 损失网络
+network_fn = nets_factory.get_network_fn(
+	FLAGS.loss_model,
+	num_classes=1,
+	is_training=False) # 不需要对损失函数训练
+
+# 图像和与处理函数，不需要训练
+image_preprocessing_fn, image_unprocessing_fn = preprocessing_factory.get_preprocessing(
+	FLAGS.loss_model, is_training=False)
+
+# 读入训练图像
+processed_images = reader.image(FLAGS.batch_size, FLAGS.image_size, FLAGS.image_size,
+								'train2014/', image_preprocessing_fn, epochs=FLAGS.epoch)
+
+# 引用生成网络，生成图像，这里需要训练
+generated = model.net(processed_images, training=True)
+
+# 将生成图像使用 image_preprocessing_fn 处理
+processed_generated = [
+	image_preprocessing_fn(image, FLAGS.image_size, FLAGS.image_size)
+	for image in tf.unstack(generated, axis=0, num=FLAGS.batch_size)
+]
+processed_generated = tf.stack(processed_generated)
+
+# 将原始图和生成图送到损失网络，加快速度
+_, endpoints_dict = network_fn(tf.concat([processed_generated, processed_images], 0), spatial_squeeze=False)
+
+# Log the structure of loss network
+tf.logging.info('Loss network layers(You can define them in "content_layers" and "style_layers"):')
+for key in endpoints_dict:
+	tf.logging.info(key)
+```
+
+#### 3）内容损失
+
+loss.py
+
+```python
+# endpoints_dict 是损失网络各层的计算结果
+# content_layers 是定义使用哪些层的差距计算损失
+def content_loss(endpoints_dict, content_layers):
+    content_loss = 0
+    for layer in content_layers:
+        generated_images, content_images = tf.split(endpoints_dict[layer], 2, 0)# 把生成图像分开
+        size = tf.size(generated_images)
+        # 生成图片的激活 与 原始图片的激活 的L^2距离
+        content_loss += tf.nn.l2_loss(generated_images - content_images) * 2 / tf.to_float(size)  
+    return content_loss
+```
+
+
+
+#### 4）风格损失
+
+loss.py
+
+```python
+# endpoints_dict 是损失网络各层的计算结果
+# style_features_t 是利用原始的风格图片计算的层的激活
+# style_layers 是定义使用哪些层计算损失
+def style_loss(endpoints_dict, style_features_t, style_layers):
+    style_loss = 0
+    style_loss_summary = {} # 为tensorboard服务的
+    for style_gram, layer in zip(style_features_t, style_layers):
+        generated_images, _ = tf.split(endpoints_dict[layer], 2, 0) # 计算风格损失
+        size = tf.size(generated_images)
+        # 计算 Gram 矩阵， L^2（Loss）
+        layer_style_loss = tf.nn.l2_loss(gram(generated_images) - style_gram) * 2 / tf.to_float(size)
+        style_loss_summary[layer] = layer_style_loss
+        style_loss += layer_style_loss
+    return style_loss, style_loss_summary
+```
+
+#### 5）调用损失
+
+train.py
+
+```python
+"""Build Losses"""
+# 定义内容损失
+content_loss = losses.content_loss(endpoints_dict, FLAGS.content_layers)
+# 定义风格损失
+style_loss, style_loss_summary = losses.style_loss(endpoints_dict, style_features_t, FLAGS.style_layers)
+# 定义tv损失，但是因为tv_weight=0，所以没用
+tv_loss = losses.total_variation_loss(generated)  
+# 总损失
+loss = FLAGS.style_weight * style_loss + FLAGS.content_weight * content_loss + FLAGS.tv_weight * tv_loss
+```
+
+####　6）定义训练、保存的变量
+
+train.py
+
+```python
+"""Prepare to Train"""
+global_step = tf.Variable(0, name="global_step", trainable=False)
+
+variable_to_train = [] # 找出需要训练的变量，append进去
+for variable in tf.trainable_variables():
+	if not(variable.name.startswith(FLAGS.loss_model)):
+		variable_to_train.append(variable)
+# 定义， global_step=global_step 不会训练损失网络
+train_op = tf.train.AdamOptimizer(1e-3).minimize(loss, global_step=global_step, var_list=variable_to_train)
+
+variables_to_restore = [] # 找出需要保存的变量，append进去
+for v in tf.global_variables():
+	if not(v.name.startswith(FLAGS.loss_model)):
+		variables_to_restore.append(v)
+# 定义，只保存 variables_to_restore
+saver = tf.train.Saver(variables_to_restore, write_version=tf.train.SaverDef.V1)
+
+sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
+```
+
+
+
+
+
+
+
 ## 四、原书md.
 
 **图像风格迁移**
