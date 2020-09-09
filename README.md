@@ -3,4 +3,4 @@
 
 目前都是在csdn上不方便放的代码先放在这里，方便给需要的朋友看。
 
-csnd:https://blog.csdn.net/qq_34451909
+csnd:https://blog.csdn.net/qq_34451909/category_10337570.html
