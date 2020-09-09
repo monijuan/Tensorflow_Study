@@ -32,21 +32,31 @@ def main(FLAGS):
     with tf.Graph().as_default():
         with tf.Session() as sess:
             """Build Network"""
+            # 损失网络
             network_fn = nets_factory.get_network_fn(
                 FLAGS.loss_model,
                 num_classes=1,
-                is_training=False)
-
+                is_training=False) # 不需要对损失函数训练
+            
+            # 图像和与处理函数，不需要训练
             image_preprocessing_fn, image_unprocessing_fn = preprocessing_factory.get_preprocessing(
-                FLAGS.loss_model,
-                is_training=False)
+                FLAGS.loss_model, is_training=False)
+
+            # 读入训练图像
             processed_images = reader.image(FLAGS.batch_size, FLAGS.image_size, FLAGS.image_size,
                                             'train2014/', image_preprocessing_fn, epochs=FLAGS.epoch)
+            
+            # 引用生成网络，生成图像，这里需要训练
             generated = model.net(processed_images, training=True)
-            processed_generated = [image_preprocessing_fn(image, FLAGS.image_size, FLAGS.image_size)
-                                   for image in tf.unstack(generated, axis=0, num=FLAGS.batch_size)
-                                   ]
+
+            # 将生成图像使用 image_preprocessing_fn 处理
+            processed_generated = [
+                image_preprocessing_fn(image, FLAGS.image_size, FLAGS.image_size)
+                for image in tf.unstack(generated, axis=0, num=FLAGS.batch_size)
+            ]
             processed_generated = tf.stack(processed_generated)
+
+            # 将原始图和生成图送到损失网络，加快速度
             _, endpoints_dict = network_fn(tf.concat([processed_generated, processed_images], 0), spatial_squeeze=False)
 
             # Log the structure of loss network

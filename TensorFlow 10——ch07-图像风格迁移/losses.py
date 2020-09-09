@@ -77,24 +77,31 @@ def get_style_features(FLAGS):
             return sess.run(features)
 
 
+# endpoints_dict 是损失网络各层的计算结果
+# style_features_t 是利用原始的风格图片计算的层的激活
+# style_layers 是定义使用哪些层计算损失
 def style_loss(endpoints_dict, style_features_t, style_layers):
     style_loss = 0
-    style_loss_summary = {}
+    style_loss_summary = {} # 为tensorboard服务的
     for style_gram, layer in zip(style_features_t, style_layers):
-        generated_images, _ = tf.split(endpoints_dict[layer], 2, 0)
+        generated_images, _ = tf.split(endpoints_dict[layer], 2, 0) # 计算风格损失
         size = tf.size(generated_images)
+        # 计算 Gram 矩阵， L^2（Loss）
         layer_style_loss = tf.nn.l2_loss(gram(generated_images) - style_gram) * 2 / tf.to_float(size)
         style_loss_summary[layer] = layer_style_loss
         style_loss += layer_style_loss
     return style_loss, style_loss_summary
 
 
+# endpoints_dict 是损失网络各层的计算结果
+# content_layers 是定义使用哪些层的差距计算损失
 def content_loss(endpoints_dict, content_layers):
     content_loss = 0
     for layer in content_layers:
-        generated_images, content_images = tf.split(endpoints_dict[layer], 2, 0)
+        generated_images, content_images = tf.split(endpoints_dict[layer], 2, 0)# 把生成图像分开
         size = tf.size(generated_images)
-        content_loss += tf.nn.l2_loss(generated_images - content_images) * 2 / tf.to_float(size)  # remain the same as in the paper
+        # 生成图片的激活 与 原始图片的激活 的L^2距离
+        content_loss += tf.nn.l2_loss(generated_images - content_images) * 2 / tf.to_float(size)  
     return content_loss
 
 

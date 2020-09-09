@@ -95,15 +95,18 @@ def residual(x, filters, kernel, strides):
 
 
 def net(image, training):
-    # Less border effects when padding a little before passing through ..
+    # 图片加上一圈边框，消除边缘效应
     image = tf.pad(image, [[0, 0], [10, 10], [10, 10], [0, 0]], mode='REFLECT')
 
+    # 三层卷积层
     with tf.variable_scope('conv1'):
         conv1 = relu(instance_norm(conv2d(image, 3, 32, 9, 1)))
     with tf.variable_scope('conv2'):
         conv2 = relu(instance_norm(conv2d(conv1, 32, 64, 3, 2)))
     with tf.variable_scope('conv3'):
         conv3 = relu(instance_norm(conv2d(conv2, 64, 128, 3, 2)))
+    
+    # 仿照 ResNet 定义一些跳过的链接
     with tf.variable_scope('res1'):
         res1 = residual(conv3, 128, 3, 1)
     with tf.variable_scope('res2'):
@@ -115,19 +118,22 @@ def net(image, training):
     with tf.variable_scope('res5'):
         res5 = residual(res4, 128, 3, 1)
     # print(res5.get_shape())
+
+    # 定义反卷积，先放大再卷积可以消除噪声
     with tf.variable_scope('deconv1'):
-        # deconv1 = relu(instance_norm(conv2d_transpose(res5, 128, 64, 3, 2)))
+        # deconv1 = relu(instance_norm(conv2d_transpose(res5, 128, 64, 3, 2))) #不直接转置
         deconv1 = relu(instance_norm(resize_conv2d(res5, 128, 64, 3, 2, training)))
     with tf.variable_scope('deconv2'):
-        # deconv2 = relu(instance_norm(conv2d_transpose(deconv1, 64, 32, 3, 2)))
+        # deconv2 = relu(instance_norm(conv2d_transpose(deconv1, 64, 32, 3, 2))) #不直接转置
         deconv2 = relu(instance_norm(resize_conv2d(deconv1, 64, 32, 3, 2, training)))
     with tf.variable_scope('deconv3'):
-        # deconv_test = relu(instance_norm(conv2d(deconv2, 32, 32, 2, 1)))
+        # deconv_test = relu(instance_norm(conv2d(deconv2, 32, 32, 2, 1))) #不直接转置
         deconv3 = tf.nn.tanh(instance_norm(conv2d(deconv2, 32, 3, 9, 1)))
 
+    # 经过了 tanh 激活，将[-1,1]缩放到[0,255]像素值范围
     y = (deconv3 + 1) * 127.5
 
-    # Remove border effect reducing padding.
+    # 去除边框
     height = tf.shape(y)[1]
     width = tf.shape(y)[2]
     y = tf.slice(y, [0, 10, 10, 0], tf.stack([-1, height - 20, width - 20, -1]))
