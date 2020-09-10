@@ -65,10 +65,13 @@ def main(FLAGS):
                 tf.logging.info(key)
 
             """Build Losses"""
+            # 定义内容损失
             content_loss = losses.content_loss(endpoints_dict, FLAGS.content_layers)
+            # 定义风格损失
             style_loss, style_loss_summary = losses.style_loss(endpoints_dict, style_features_t, FLAGS.style_layers)
-            tv_loss = losses.total_variation_loss(generated)  # use the unprocessed image
-
+            # 定义tv损失，但是因为tv_weight=0，所以没用
+            tv_loss = losses.total_variation_loss(generated)  
+            # 总损失
             loss = FLAGS.style_weight * style_loss + FLAGS.content_weight * content_loss + FLAGS.tv_weight * tv_loss
 
             # Add Summary for visualization in tensorboard.
@@ -95,16 +98,18 @@ def main(FLAGS):
             """Prepare to Train"""
             global_step = tf.Variable(0, name="global_step", trainable=False)
 
-            variable_to_train = []
+            variable_to_train = [] # 找出需要训练的变量，append进去
             for variable in tf.trainable_variables():
                 if not(variable.name.startswith(FLAGS.loss_model)):
                     variable_to_train.append(variable)
+            # 定义， global_step=global_step 不会训练损失网络
             train_op = tf.train.AdamOptimizer(1e-3).minimize(loss, global_step=global_step, var_list=variable_to_train)
 
-            variables_to_restore = []
+            variables_to_restore = [] # 找出需要保存的变量，append进去
             for v in tf.global_variables():
                 if not(v.name.startswith(FLAGS.loss_model)):
                     variables_to_restore.append(v)
+            # 定义，只保存 variables_to_restore
             saver = tf.train.Saver(variables_to_restore, write_version=tf.train.SaverDef.V1)
 
             sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
