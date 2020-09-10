@@ -5,6 +5,7 @@ samples
 logs
 test*
 .png
+.gif
 
 web/js/gen_layers.js
 
