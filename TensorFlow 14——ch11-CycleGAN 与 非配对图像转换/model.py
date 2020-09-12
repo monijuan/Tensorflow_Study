@@ -132,6 +132,7 @@ class CycleGAN:
       )
       return learning_step
 
+    # G_loss、F_loss、D_Y_loss、D_X_loss
     G_optimizer = make_optimizer(G_loss, self.G.variables, name='Adam_G')
     D_Y_optimizer = make_optimizer(D_Y_loss, self.D_Y.variables, name='Adam_D_Y')
     F_optimizer =  make_optimizer(F_loss, self.F.variables, name='Adam_F')
@@ -149,6 +150,7 @@ class CycleGAN:
       y: 4D tensor (batch_size, image_size, image_size, 3)
     Returns:
       loss: scalar
+    判别器损失
     """
     if use_lsgan:
       # use mean squared error
@@ -162,7 +164,9 @@ class CycleGAN:
     return loss
 
   def generator_loss(self, D, fake_y, use_lsgan=True):
-    """  fool discriminator into believing that G(x) is real
+    """  
+    fool discriminator into believing that G(x) is real
+    生成器损失
     """
     if use_lsgan:
       # use mean squared error
@@ -173,7 +177,9 @@ class CycleGAN:
     return loss
 
   def cycle_consistency_loss(self, G, F, x, y):
-    """ cycle consistency loss (L1 norm)
+    """
+    cycle consistency loss (L1 norm)
+    循环一致性损失
     """
     forward_loss = tf.reduce_mean(tf.abs(F(G(x))-x))
     backward_loss = tf.reduce_mean(tf.abs(G(F(y))-y))
