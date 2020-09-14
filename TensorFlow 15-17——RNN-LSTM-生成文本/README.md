@@ -1,3 +1,7 @@
+CSDN：https://blog.csdn.net/qq_34451909/article/details/108571585
+
+
+
 [TensorFlow 15——ch12-RNN、LSTM基本结构](https://blog.csdn.net/qq_34451909/article/details/108558237)
 
 [TensorFlow 16——ch12-RNN 和 LSTM 的实现方式](https://blog.csdn.net/qq_34451909/article/details/108562046)
