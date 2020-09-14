@@ -1,9 +1,9 @@
 # Tensorflow_Study
-本工程是为了学习 **Tensorflow** 而传一些代码，源码大都书中配套的资料以及个人的一些注释说明。欢迎提出批评指正！
+本工程是为了学习 **Tensorflow** 而传一些代码，源码大都书中配套的资料以及个人的一些注释说明。
 
 学习笔记同步在CSDN上：[https://blog.csdn.net/qq_34451909/category_10337570.html](https://blog.csdn.net/qq_34451909/category_10337570.html)
 
-以下是各章代码详细的运行方法：
+## 各章内容概要：
 
 1. [数字识别](TensorFlow 01-03——数字识别/README.md)
 2. [convolutional做CIFAR-10 识别模型](TensorFlow 04——ch02-convolutional做CIFAR-10 识别模型/README.md)
@@ -21,3 +21,8 @@
 
 
 
+
+
+
+
+欢迎各位提出批评指正！
