@@ -1,4 +1,16 @@
-CSDN：https://blog.csdn.net/qq_34451909/article/details/108382667
+
+
+CSDN：
+
+TensorFlow 07——ch05-理解R-CNN、Fast R-CNN、Faster R-CNN：
+
+https://blog.csdn.net/qq_34451909/article/details/108381094
+
+TensorFlow 08——ch05-TensorFlow Object Detection 深度学习目标检测：
+
+https://blog.csdn.net/qq_34451909/article/details/108382667
+
+
 
 数据集和模型较大，可以提前下！
 链接：[https://pan.baidu.com/s/11E-8-AmUniHqu5WvQF82gQ](https://pan.baidu.com/s/11E-8-AmUniHqu5WvQF82gQ) 
