@@ -134,15 +134,15 @@ def dynamicRNN(x, seqlen, weights, biases):
 
 
 ##################################################################
-# 定义损失
+# 定义损失和准确率
 pred = dynamicRNN(x, seqlen, weights, biases) # pred 是 logits 而不是概率
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)) # 定义损失
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
-
 correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1)) # 分类准确率
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32)) # 平均准确率
 init = tf.global_variables_initializer() # 变量初始化
 
+##################################################################
 # 训练
 with tf.Session() as sess:
     sess.run(init)
